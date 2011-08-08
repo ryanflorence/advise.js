@@ -45,13 +45,13 @@ var aop = function (obj){
     };
   }
 
-  obj.before = function (method, fn){
+  obj.before = function (method, advice){
     var length;
     if (!register.before[method]){
       register.before[method] = fakeArray();
       wrapBefore(method);
     }
-    length = register.before[method].push(fn);
+    length = register.before[method].push(advice);
     return (function (){
       var index = length - 1;
       return {
@@ -60,7 +60,7 @@ var aop = function (obj){
         },
 
         attach: function (){
-          register.before[method][index] = fn;
+          register.before[method][index] = advice;
         },
 
         when: function (){},
@@ -70,7 +70,7 @@ var aop = function (obj){
     }());
   };
 
-  obj.after = function (method, fn){
+  obj.after = function (method, advice){
     var index;
 
     if (!register.after[method]){
@@ -78,7 +78,7 @@ var aop = function (obj){
       wrapAfter(method);
     }
 
-    index = register.after[method].push(fn) - 1;
+    index = register.after[method].push(advice) - 1;
 
     return {
       detach: function (){
@@ -86,7 +86,7 @@ var aop = function (obj){
       },
 
       attach: function (){
-        register.after[method][index] = fn;
+        register.after[method][index] = advice;
       },
 
       when: function (){},
@@ -94,6 +94,8 @@ var aop = function (obj){
       once: function (){}
     };
   };
+
+  return obj;
 };
 
 /*
