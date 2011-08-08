@@ -10,7 +10,9 @@ function newObj (){
     add: function (x, y){
       return x + y;
     },
-    noop: function (){}
+    foo: function (foo){
+      return foo;
+    }
   });
 }
 
@@ -91,5 +93,65 @@ test('after should', function (){
   });
   obj.add(1,2);
   equal(result, 3, 'send return value as first arguments');
+});
+
+module('advice methods');
+test('once should', function (){
+  var obj = newObj(),
+      x = false,
+      y = false,
+      returns = false;
+
+  obj.before('foo', function (){
+    x = true;
+  }).once();
+
+  obj.after('foo', function (){
+    y = true;
+  }).once();
+
+  returns = obj.foo(true);
+
+  ok(returns);
+  ok(x);
+  ok(y);
+  x = y = false;
+
+  returns = obj.foo(true);
+  ok(!x, 'not be called a second time with before');
+  ok(!y, 'not be called a second time with after');
+  ok(returns, 'not mess up the original method');
+});
+
+test('when should', function (){
+  var obj = newObj(),
+      a = false,
+      b = false,
+      x = false,
+      y = false;
+
+  obj.before('foo', function (){
+    x = !x
+  }).when(function (){
+    return a;
+  });
+
+  obj.after('foo', function (){
+    y = !y
+  }).when(function (){
+    return b;
+  });
+
+  obj.foo();
+  ok(!x, 'not call the advice if condition is false for before');
+  ok(!x, 'not call the advice if condition is false for after');
+
+  a = b = true;
+  obj.foo();
+  ok(x, 'call the advice when condition is true for before');
+  ok(y, 'call the advice when condition is true for after');
 
 });
+
+
+
