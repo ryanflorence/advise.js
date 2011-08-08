@@ -2,86 +2,98 @@ var aop = function (obj){
 
   var register = { before: {}, after: {} }, wrap = {};
 
-  wrap.before = function (method){
+  function wrapBefore (method){
     var originalMethod = obj[method];
-    obj[method] = function (){
-      for (var i = 0, l = register.before[method].length; i < l; i++) {
-        register.before[method][i].apply(obj, arguments);
-      }
-      var r = originalMethod.apply(obj, arguments);
-      return r;
-    };
-  };
 
-  wrap.after = function (method){
+    obj[method] = function (){
+      var args = [].slice.call(arguments, 0);
+
+      for (var i = 0, l = register.before[method].length, returned; i < l; i++){
+        returned = register.before[method][i].apply(obj, args);
+
+        // changes arguments if advice returns array
+        if (returned !== undefined && returned.length){ // loose check for array
+          args = returned;
+        }
+      }
+
+      return originalMethod.apply(obj, args);
+    };
+  }
+
+  function wrapAfter (method){
     var originalMethod = obj[method];
+
     obj[method] = function (){
       var args = [].slice.call(arguments, 0),
-          returns = originalMethod.apply(obj, args);
-      args.unshift(returns);
+          returned = originalMethod.apply(obj, args);
+
+      args.unshift(returned);
+
       for (var i = 0, l = register.after[method].length; i < l; i++) {
         register.after[method][i].apply(obj, args);
       }
-    };
-  };
 
-  function setFirst (type, method){
-    register[type][method] = [];
-    wrap[type](method);
+      return returned;
+    };
   }
 
   obj.before = function (method, fn){
     var length;
-    if (!register.before[method]) setFirst('before', method);
+
+    if (!register.before[method]){
+      register.before[method] = [];
+      wrapBefore(method);
+    }
+
     length = register.before[method].push(fn);
 
     return (function (){
       var l = length;
+
       return {
         detach: function (){
           var r = register.before[method].splice(l - 1, 1);
           l = register.before[method].length;
         },
-
         attach: function (){},
-
-        fire: function (){}
+        when: function (){},
+        once: function (){}
       };
     }());
   };
 
   obj.after = function (method, fn){
     var length;
-    if (!register.after[method]) setFirst('after', method);
+
+    if (!register.after[method]){
+      register.after[method] = [];
+      wrapAfter(method);
+    }
+
     length = register.after[method].push(fn);
 
     return (function (){
       var l = length;
+
       return {
         detach: function (){
           var r = register.after[method].splice(l - 1, 1);
           l = register.after[method].length;
         },
-
         attach: function (){},
-
-        fire: function (){}
+        when: function (){},
+        once: function (){}
       };
     }());
   };
 };
 
-if (typeof module != 'undefined') module.exports = aop;
-
-
 /*
-var indexOf: [].indexOf ? function(item, array){
-    return indexOf.call(array, item)
-  } : function (item, array){
-  for (var i = 0, l = array.length; i < l; i++)
-    if (array[i] === item)
-      return i;
-
-  return -1;
-};
+// considering generics
+aop.before = function (obj, method, fn){};
+aop.after = function (obj, method, fn){};
+aop.advise = function (obj, method, fn){};
 */
+
+if (typeof module != 'undefined') module.exports = aop;
