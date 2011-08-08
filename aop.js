@@ -1,30 +1,77 @@
 var aop = function (obj){
 
-  var register = { before: {}, after: {} };
+  var register = { before: {}, after: {} }, wrap = {};
+
+  wrap.before = function (method){
+    var originalMethod = obj[method];
+    obj[method] = function (){
+      for (var i = 0, l = register.before[method].length; i < l; i++) {
+        register.before[method][i].apply(obj, arguments);
+      }
+      var r = originalMethod.apply(obj, arguments);
+      return r;
+    };
+  };
+
+  wrap.after = function (method){
+    var originalMethod = obj[method];
+    obj[method] = function (){
+      var args = [].slice.call(arguments, 0),
+          returns = originalMethod.apply(obj, args);
+      args.unshift(returns);
+      for (var i = 0, l = register.after[method].length; i < l; i++) {
+        register.after[method][i].apply(obj, args);
+      }
+    };
+  };
 
   function setFirst (type, method){
-    var originalMethod = obj[method];
     register[type][method] = [];
-    obj[method] = function (){
-      for (var i = 0, l = register[type][method].length; i < l; i++) {
-        register[type][method][i].apply(this, arguments);
-      }
-      originalMethod.apply(this, arguments);
-    }
+    wrap[type](method);
   }
 
   obj.before = function (method, fn){
+    var length;
     if (!register.before[method]) setFirst('before', method);
-    register.before[method].push(fn);
+    length = register.before[method].push(fn);
+
+    return (function (){
+      var l = length;
+      return {
+        detach: function (){
+          var r = register.before[method].splice(l - 1, 1);
+          l = register.before[method].length;
+        },
+
+        attach: function (){},
+
+        fire: function (){}
+      };
+    }());
   };
 
   obj.after = function (method, fn){
-    if (!register.after[method]) setFirst('before', method);
-    register.after[method].push(fn);
+    var length;
+    if (!register.after[method]) setFirst('after', method);
+    length = register.after[method].push(fn);
+
+    return (function (){
+      var l = length;
+      return {
+        detach: function (){
+          var r = register.after[method].splice(l - 1, 1);
+          l = register.after[method].length;
+        },
+
+        attach: function (){},
+
+        fire: function (){}
+      };
+    }());
   };
 };
 
-module.exports = aop;
+if (typeof module != 'undefined') module.exports = aop;
 
 
 /*
