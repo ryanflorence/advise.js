@@ -2,90 +2,97 @@ var aop = function (obj){
 
   var register = { before: {}, after: {} }, wrap = {};
 
-  function wrapBefore (method){
-    var originalMethod = obj[method];
+  function fakeArray (){
+    return {
+      length: 0,
 
-    obj[method] = function (){
-      var args = [].slice.call(arguments, 0);
+      push: function (item){
+        this.length++;
+        this[this.length - 1] = item;
+        return this.length;
+      },
 
-      for (var i = 0, l = register.before[method].length, returned; i < l; i++){
-        returned = register.before[method][i].apply(obj, args);
-
-        // changes arguments if advice returns array
-        if (returned !== undefined && returned.length){ // loose check for array
-          args = returned;
+      each: function (fn, bind){
+        for (var i = 0, l = this.length; i < l; i++){
+          if (i in this) fn.call(bind || this, this[i], i, this);
         }
       }
+    };
+  }
 
+  function wrapBefore (method){
+    var originalMethod = obj[method];
+    obj[method] = function (){
+      var args = [].slice.call(arguments, 0);
+      register.before[method].each(function (advice, index){
+        returned = advice.apply(obj, args);
+        if (returned !== undefined) args = returned;
+      });
       return originalMethod.apply(obj, args);
     };
   }
 
   function wrapAfter (method){
     var originalMethod = obj[method];
-
     obj[method] = function (){
       var args = [].slice.call(arguments, 0),
           returned = originalMethod.apply(obj, args);
-
       args.unshift(returned);
-
-      for (var i = 0, l = register.after[method].length; i < l; i++) {
-        register.after[method][i].apply(obj, args);
-      }
-
+      register.after[method].each(function (advice, index){
+        advice.apply(obj, args);
+      });
       return returned;
     };
   }
 
   obj.before = function (method, fn){
     var length;
-
     if (!register.before[method]){
-      register.before[method] = [];
+      register.before[method] = fakeArray();
       wrapBefore(method);
     }
-
     length = register.before[method].push(fn);
-
     return (function (){
-      var l = length;
-
+      var index = length - 1;
       return {
         detach: function (){
-          var r = register.before[method].splice(l - 1, 1);
-          l = register.before[method].length;
+          delete register.before[method][index];
         },
-        attach: function (){},
+
+        attach: function (){
+          register.before[method][index] = fn;
+        },
+
         when: function (){},
+
         once: function (){}
       };
     }());
   };
 
   obj.after = function (method, fn){
-    var length;
+    var index;
 
     if (!register.after[method]){
-      register.after[method] = [];
+      register.after[method] = fakeArray();
       wrapAfter(method);
     }
 
-    length = register.after[method].push(fn);
+    index = register.after[method].push(fn) - 1;
 
-    return (function (){
-      var l = length;
+    return {
+      detach: function (){
+        delete register.after[method][index];
+      },
 
-      return {
-        detach: function (){
-          var r = register.after[method].splice(l - 1, 1);
-          l = register.after[method].length;
-        },
-        attach: function (){},
-        when: function (){},
-        once: function (){}
-      };
-    }());
+      attach: function (){
+        register.after[method][index] = fn;
+      },
+
+      when: function (){},
+
+      once: function (){}
+    };
   };
 };
 
