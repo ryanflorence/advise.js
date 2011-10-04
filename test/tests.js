@@ -1,8 +1,7 @@
-// global / reused vars
-var aop = (typeof window != 'undefined' ? aop : require('./aop.js'));
+var advise = (typeof window != 'undefined' ? advise : require('./advise.js'));
 
 function newObj (){
-  return aop({
+  return {
     arr: [],
     push: function (val){
       this.arr.push(val);
@@ -13,7 +12,7 @@ function newObj (){
     foo: function (foo){
       return foo;
     }
-  });
+  };
 }
 
 module('basics');
@@ -21,7 +20,7 @@ test('before should', function (){
   var obj = newObj(),
       context;
 
-  var advice = obj.before('push', function (){
+  var advice = advise(obj).before('push', function (){
     context = this;
     obj.arr.push('0');
   });
@@ -45,7 +44,7 @@ test('after should', function (){
       x = false,
       context;
 
-  var advice = obj.after('push', function (){
+  var advice = advise(obj).after('push', function (){
     obj.arr.push('advice');
     context = this;
   });
@@ -70,14 +69,14 @@ test('before should', function (){
   var obj = newObj(),
       _x = 0;
 
-  var setX = obj.before('add', function (x, y){
+  var setX = advise(obj).before('add', function (x, y){
     _x = x;
   });
   result = obj.add(2,3);
   equal(_x, 2, 'pass in the arguments that were given to the method');
   equal(result, 5, 'not mutate the arguments if nothing is returned');
 
-  var doubleArgs = obj.before('add', function (x, y){
+  var doubleArgs = advise(obj).before('add', function (x, y){
     return [x * 2, y * 2];
   });
   result = obj.add(2, 3);
@@ -88,7 +87,7 @@ test('after should', function (){
   var obj = newObj(),
       result = 0;
 
-  obj.after('add', function (val){
+  advise(obj).after('add', function (val){
     result = val;
   });
   obj.add(1,2);
@@ -101,12 +100,13 @@ test('once should', function (){
       x = false,
       y = false,
       returns = false;
+      advisor = advise(obj);
 
-  obj.before('foo', function (){
+  advisor.before('foo', function (){
     x = true;
   }).once();
 
-  obj.after('foo', function (){
+  advisor.after('foo', function (){
     y = true;
   }).once();
 
@@ -123,20 +123,22 @@ test('once should', function (){
   ok(returns, 'not mess up the original method');
 });
 
+/*
 test('when should', function (){
   var obj = newObj(),
       a = false,
       b = false,
       x = false,
-      y = false;
+      y = false,
+      advisor = advise(obj);
 
-  obj.before('foo', function (){
+  advisor.before('foo', function (){
     x = !x
   }).when(function (){
     return a;
   });
 
-  obj.after('foo', function (){
+  advisor.after('foo', function (){
     y = !y
   }).when(function (){
     return b;
@@ -152,6 +154,6 @@ test('when should', function (){
   ok(y, 'call the advice when condition is true for after');
 
 });
-
+*/
 
 
