@@ -1,0 +1,8 @@
+{
+  "name": "advise",
+  "description": "Aspect-Oriented Programming for JavaScript",
+  "version": "1.0.0",
+  "devDependencies": {
+    "tap": "0.0.10"
+  }
+}
