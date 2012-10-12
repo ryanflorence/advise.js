@@ -1,8 +1,6 @@
 var test = require('tap').test,
     advise = require('../src/advise');
 
-console.log('blah!')
-
 function newObj () {
   return {
     arr: [],
